@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "base-mpc"
+version = "0.1.0"
+description = "Interactive MPC planner for holonomic and non-holonomic robot bases."
+authors = ["Max Spahn <m.spahn@tudelft.nl>"]
+readme = "README.md"
+packages = [{include = "base_mpc"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+urdfenvs = "^0.8.15"
+robotmpcs = {git = "https://github.com/maxspahn/robot_mpcs.git", rev = "ft-updates"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
