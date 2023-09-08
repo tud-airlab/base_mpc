@@ -1,0 +1,4 @@
+---
+bool goal_received
+bool goal_achieved
+geometry_msgs/PoseStamped goal_pose_in_map

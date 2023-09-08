@@ -23,5 +23,9 @@ This generates a folder named 'AlbertFORCESNLPsolver' in python_solver_generatio
 
 [ToDo: Extension for Acados]
 
+## Test in Simulation
+```
+roslaunch albert_gazebo albert_gazebo_navigation.launch panda_control_mode:=velocity localization:=amcl world:=AH_store-2
+```
 
 

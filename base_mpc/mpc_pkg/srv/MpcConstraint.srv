@@ -1,0 +1,4 @@
+float32[] current_state
+geometry_msgs/Point[] point_list
+---
+jsk_recognition_msgs/PolygonArray polygon

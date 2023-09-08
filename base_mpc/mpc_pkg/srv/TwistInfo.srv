@@ -1,0 +1,3 @@
+---
+bool twist_received
+geometry_msgs/TwistStamped twist_stamped_in_map

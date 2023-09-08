@@ -1,0 +1,3 @@
+---
+bool pose_received
+geometry_msgs/PoseStamped pose_stamped_in_map

@@ -7,9 +7,14 @@ readme = "README.md"
 packages = [{include = "base_mpc"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 urdfenvs = "^0.8.15"
 robotmpcs = {git = "https://github.com/maxspahn/robot_mpcs.git", rev = "ft-updates"}
+rospkg = "^1.5.0"
+roslibpy = "^1.5.0"
+pypoman = "^1.0.0"
+termcolor = "^2.3.0"
+pyyaml = "^6.0.1"
 
 
 [build-system]
