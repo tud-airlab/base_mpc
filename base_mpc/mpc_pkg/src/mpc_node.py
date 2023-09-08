@@ -23,7 +23,7 @@ from ROS_visualization.logger import Logger
 
 
 # ros messages and services
-from geometry_msgs.msg import PoseStamped, Pose, PolygonStamped, Point32, Twist, Point
+from geometry_msgs.msg import PoseStamped, Pose, PolygonStamped, Point32, Twist, Point, PoseWithCovarianceStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
 from jsk_recognition_msgs.msg import PolygonArray
 from std_srvs.srv import Empty
@@ -37,13 +37,13 @@ class mpc_node():
         self.radius = 1
         self.reference_velocity_ = 0.1
         self.mpc_dt = 0.2
-        self.control_loop_dt = 1 / control_frequence
+        self.control_loop_dt = 0.2
 
         # FORCES parameters
         self.FORCES_N = 10
         self.FORCES_N_bar = self.FORCES_N + 2
-        self.FORCES_NU = 4
-        self.FORCES_NX = 6
+        self.FORCES_NU = 3
+        self.FORCES_NX = 5
         self.FORCES_TOTAL_V = self.FORCES_NU + self.FORCES_NX
         self.FORCES_NPAR = 75
         self.FORCES_x0 = np.zeros(int(self.FORCES_TOTAL_V * self.FORCES_N_bar), dtype="double")
@@ -68,14 +68,14 @@ class mpc_node():
         self.command_ = Twist()
         self.current_state = np.zeros((self.FORCES_NX, 1))
         self.predicted_traj = np.zeros((self.FORCES_N, 2))
-        self.human_states = []
+        self.human_states = [[], [], [], []]
 
         # ros publisher and subscriber
         self.listener = tf.TransformListener()
-        self.odom_subscriber = rospy.Subscriber('/odom', Odometry, self.OdomCB)
+        self.pose_subscriber = rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, self.OdomCB)
         #self.human_states_subscriber = rospy.Subscriber('/pedsim_visualizer/tracked_persons', TrackedPersons,
                                                 #        self.HumanStatesCB)
-        self.pub_twist = rospy.Publisher('/four_wheel_controller/cmd_vel', Twist, queue_size=1)
+        self.pub_twist = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.get_goal_info_client = rospy.ServiceProxy("/goal_receiver/get_goal_info", GoalInfo)
         self.set_goal_achieved_client = rospy.ServiceProxy("/goal_receiver/set_goal_achieved", Empty)
         self.get_mpc_constraint_client = rospy.ServiceProxy("/SFC_generate_node/get_constraints", MpcConstraint)
@@ -90,7 +90,7 @@ class mpc_node():
 
     def OdomCB(self, msg):
         input_pose = PoseStamped()
-        input_pose.header.frame_id = "odom"
+        input_pose.header.frame_id = "map"
         input_pose.pose = msg.pose.pose
 
         out_pose = self.transform_pose(input_pose)
@@ -107,9 +107,9 @@ class mpc_node():
 
         self.current_state[
             2] = yaw_angle  # = np.sign(yaw_goal)* (np.abs(yaw_goal)-np.pi)# heading additional term because driving direction was turned around
-        self.current_state[3] = msg.twist.twist.linear.x
-        self.current_state[4] = msg.twist.twist.linear.y
-        self.current_state[5] = np.clip(msg.twist.twist.angular.z, -3, 3)  # angular velocity
+        self.current_state[3] = 0#msg.twist.twist.linear.x
+        self.current_state[4] = 0#msg.twist.twist.linear.y
+
 
     def HumanStatesCB(self, msg):
         self.human_states.clear()
@@ -210,19 +210,22 @@ class mpc_node():
                 self.linear_constraints_A.append(A)
                 self.linear_constraints_b.append(b)
 
+
+
             end_polygon = timer()
             polygon_time = end_polygon - start_polygon
             # self.logger.log(polygon_time, type=1)
 
             start_solver = timer()
-            control_cmd_dx, control_cmd_dy, control_cmd_dpsi = self.run_solver()
+            OUTPUT, EXITFLAG, INFO = self.run_solver()
             end_solver = timer()
             solver_time = end_solver - start_solver
             # self.logger.log(solver_time, type=1)
 
-            self.command_.linear.x = control_cmd_dx
-            self.command_.linear.y = control_cmd_dy
-            self.command_.angular.z = control_cmd_dpsi
+            self.command_.linear.x = self.control_cmd_linear
+            self.command_.angular.z = self.control_cmd_angular
+            print(self.command_)
+
 
             self.pub_twist.publish(self.command_)
             self.visuals.publish()
@@ -243,6 +246,11 @@ class mpc_node():
         for i in range(self.FORCES_NX):
             self.FORCES_xinit[i] = self.current_state[i, 0]  # initial state constraints
             self.FORCES_x0[self.FORCES_NU + i] = self.current_state[i, 0]  # initial solution guess
+        for N_iter in range(0, self.FORCES_N_bar):
+            self.FORCES_x0[N_iter*self.FORCES_TOTAL_V:(N_iter+1)*self.FORCES_TOTAL_V] = self.FORCES_x0[:self.FORCES_TOTAL_V]
+
+        print('error')
+        print(self.goal_state)
 
         for N_iter in range(0, self.FORCES_N_bar):
             k = N_iter * self.FORCES_NPAR
@@ -263,32 +271,39 @@ class mpc_node():
             self.FORCES_all_parameters[k + 14] = self.disc
             self.FORCES_all_parameters[k + 15] = self.disc_offset
 
-            idx = 51
-            if N_iter > 0 and N_iter < self.FORCES_N_bar - 1:
-                for c in range(min(self.linear_constraints_b[N_iter - 1].shape[0], 8)):
-                    self.FORCES_all_parameters[k + idx + 0] = self.linear_constraints_A[N_iter - 1][c, 0]
-                    self.FORCES_all_parameters[k + idx + 1] = self.linear_constraints_A[N_iter - 1][c, 1]
-                    self.FORCES_all_parameters[k + idx + 2] = self.linear_constraints_b[N_iter - 1][c]
-                    idx = idx + 3
 
+
+            idx = 51
+            self.linear_constraints_A = 10*[np.array([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 0], [1, 0] ,[1, 0], [1, 0]]) ]#todo remove
+            self.linear_constraints_b = 10* [np.array([100, 100, 100, 100, 100, 100, 100, 100])]
+
+            for c in range(min(self.linear_constraints_b[0].shape[0], 8)):
+                self.FORCES_all_parameters[k + idx + 0] = self.linear_constraints_A[0][c, 0]
+                self.FORCES_all_parameters[k + idx + 1] = self.linear_constraints_A[0][c, 1]
+                self.FORCES_all_parameters[k + idx + 2] = self.linear_constraints_b[0][c]
+                idx = idx + 3
             idx = 16
             if N_iter > 0 and N_iter < self.FORCES_N_bar - 1:
                 for e in range(min(len(self.human_states), 4)):
-                    self.FORCES_all_parameters[k + idx + 0] = self.human_states[e]["pose"].position.x + self.mpc_dt * \
-                                                              self.human_states[e]["twist"].linear.x * N_iter
-                    self.FORCES_all_parameters[k + idx + 1] = self.human_states[e]["pose"].position.y + self.mpc_dt * \
-                                                              self.human_states[e]["twist"].linear.y * N_iter
-                    self.FORCES_all_parameters[k + idx + 2] = np.arctan2(self.human_states[e]["twist"].linear.y,
-                                                                         self.human_states[e]["twist"].linear.x)
-                    self.FORCES_all_parameters[k + idx + 3] = 1 + self.disc
-                    self.FORCES_all_parameters[k + idx + 4] = 1 + self.disc
+                    self.FORCES_all_parameters[k + idx + 0] = 100#self.human_states[e]["pose"].position.x + self.mpc_dt * \
+                                                              #self.human_states[e]["twist"].linear.x * N_iter
+                    self.FORCES_all_parameters[k + idx + 1] = 100 #self.human_states[e]["pose"].position.y + self.mpc_dt * \
+                                                              #self.human_states[e]["twist"].linear.y * N_iter
+                    self.FORCES_all_parameters[k + idx + 2] = 1#np.arctan2(self.human_states[e]["twist"].linear.y,
+                                                                     #    self.human_states[e]["twist"].linear.x)
+                    self.FORCES_all_parameters[k + idx + 3] = 1#1 + self.disc
+                    self.FORCES_all_parameters[k + idx + 4] = 1 # 1 + self.disc
                     idx = idx + 7
 
         PARAMS = {"x0": self.FORCES_x0, "xinit": self.FORCES_xinit, "all_parameters": self.FORCES_all_parameters}
 
+
         OUTPUT, EXITFLAG, INFO = JackalSolver.solve(PARAMS)
+        print(EXITFLAG)
+
 
         if EXITFLAG == 1:
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             for t in range(self.FORCES_N):
                 for i in range(0, self.FORCES_TOTAL_V):
                     if t < 9:
@@ -296,24 +311,16 @@ class mpc_node():
                     else:
                         self.FORCES_x0[i + t * self.FORCES_TOTAL_V] = OUTPUT["x" + str(t + 1)][i]
 
-            psi = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 2]
-            dx = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 3]
-            dy = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 4]
-            dpsi = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 5]
-
-            control_cmd_dx = dx * math.cos(psi) + dy * math.sin(psi)
-            control_cmd_dy = dy * math.cos(psi) - dx * math.sin(psi)
-            control_cmd_dpsi = dpsi
+            self.control_cmd_linear = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 3]
+            self.control_cmd_angular = self.FORCES_x0[self.FORCES_TOTAL_V + self.FORCES_NU + 4]
+            print('cmd_vel')
+            print(self.control_cmd_linear)
+            print(self.control_cmd_angular)
 
             for N_iter in range(0, self.FORCES_N):
                 self.predicted_traj[N_iter] = self.FORCES_x0[
                                               N_iter * self.FORCES_TOTAL_V + self.FORCES_NU:N_iter * self.FORCES_TOTAL_V + self.FORCES_NU + 2]
 
-            for i in range(2, self.predicted_traj.shape[0]):
-                pose = Pose()
-                pose.position.x = self.predicted_traj[i, 0]
-                pose.position.y = self.predicted_traj[i, 1]
-                self.visual_plan_circle.add_marker(pose)
 
         else:
             self.logger.log("forcepro solver failed", type=-1)
@@ -323,9 +330,10 @@ class mpc_node():
             self.FORCES_all_parameters = np.zeros(int(self.FORCES_N_bar * self.FORCES_NPAR), dtype="double")
             self.predicted_traj = np.ones((self.FORCES_N, 2)) * np.array(
                 [self.current_state[0, 0], self.current_state[1, 0]]).reshape((1, 2))
-            control_cmd_dx, control_cmd_dy, control_cmd_dpsi = [0, 0, 0]
+            self.control_cmd_linear, self.control_cmd_angular = [0, 0]
 
-        return control_cmd_dx, control_cmd_dy, control_cmd_dpsi
+        return OUTPUT, EXITFLAG, INFO
+
 
     def check_goal_achieved(self, current_state, threshold=0.1):
 
@@ -409,7 +417,7 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         start_loop = timer()
         mpc_node_.control_loop()
-        mpc_node_.actuate()
+        #mpc_node_.actuate()
 
         end_loop = timer()
         loop_time = end_loop - start_loop

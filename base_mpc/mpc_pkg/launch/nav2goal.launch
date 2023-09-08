@@ -7,7 +7,7 @@
     <param name="SFC_generate_enable_logging" value="false"/>
     <param name="mpc_enable_logging" value="true"/>
 
-    <!--><node pkg="mpc_pkg" type="SFC_generate_node" name="SFC_generate_node" output="screen"/>-->
+    <node pkg="mpc_pkg" type="SFC_generate_node" name="SFC_generate_node" output="screen"/>
     <node pkg="mpc_pkg" type="mpc_node.py" name="mpc_node" output="screen"/>
 
 </launch>

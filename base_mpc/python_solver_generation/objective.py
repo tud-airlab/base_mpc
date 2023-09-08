@@ -39,16 +39,18 @@ class BASE_MPCObjective:
     def define_parameters(self, params):
         params.add_parameter("x_goal")
         params.add_parameter("y_goal")
+        params.add_parameter("psi_goal")
         params.add_parameter("Wrepulsive")
         params.add_parameter("Wx")
         params.add_parameter("Wy")
+        params.add_parameter("Wpsi")
         params.add_parameter("Walpha")
         params.add_parameter("Wtheta")
         params.add_parameter("Wa")
         params.add_parameter("Ws")
         params.add_parameter("Wv")
+        params.add_parameter("Wforward")
         params.add_parameter("Ww")
-
 
 
     def get_value(self, x, u, settings, stage_idx):
@@ -61,6 +63,7 @@ class BASE_MPCObjective:
             pos_x = x[0]
             pos_y = x[1]
             pos = x[:2]
+            psi = x[2]
             v = x[3]
             w = x[4]
 
@@ -70,18 +73,26 @@ class BASE_MPCObjective:
             # Parameters
             x_goal = getattr(settings.params, "x_goal")
             y_goal = getattr(settings.params, "y_goal")
+            psi_goal = getattr(settings.params, "psi_goal")
             Wrepulsive = getattr(settings.params, "Wrepulsive")
+
             Wx = getattr(settings.params, "Wx")
             Wy = getattr(settings.params, "Wy")
-            Walpha = getattr(settings.params, "Walpha")
-            Wa = getattr(settings.params, "Wa")
-            Ws = getattr(settings.params, "Ws")
+            Wpsi = getattr(settings.params, "Wpsi")
+
             Wv = getattr(settings.params, "Wv")
             Ww = getattr(settings.params, "Ww")
+            Wforward = getattr(settings.params, "Wforward")
+
+            Walpha = getattr(settings.params, "Walpha")
+            Wa = getattr(settings.params, "Wa")
+
+            Ws = getattr(settings.params, "Ws")
 
             # Derive position error
             x_error = pos_x - x_goal
             y_error = pos_y - y_goal
+            psi_error = psi - psi_goal
 
             disToGoal = casadi.norm_2(pos- casadi.vertcat(x_goal, y_goal))
             disToGoal = casadi.fmax(disToGoal, self.config.NEAR_GOAL_THRESHOLD) # in case arriving at goal posistion
@@ -93,7 +104,7 @@ class BASE_MPCObjective:
 
             if u.shape[0] >2: #Todo check meaning
                 if stage_idx == self.config.FORCES_N+1: #Todo parameter N
-                    cost = Wx*x_error ** 2 / disToGoal + Wy*y_error ** 2/disToGoal   #+ Wv*v*v/max_v_range + Ww*w*w/max_w_range
+                    cost = Wx*x_error ** 2 / disToGoal + Wy*y_error ** 2/disToGoal + Wpsi *psi_error ** 2   #+ Wv*v*v/max_v_range + Ww*w*w/max_w_range
                 else:
                     cost = 0 #Wa * a * a / max_acc_range + Walpha * alpha * alpha / max_alpha_range + Wv * v * v / max_v_range + Ww * w * w / max_w_range
             else: print("not implemented yet")

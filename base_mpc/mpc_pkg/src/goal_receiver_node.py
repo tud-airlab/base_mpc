@@ -29,7 +29,7 @@ class goal_receiver_node():
         self.logger = Logger("goal_receiver", 1)
 
         # define goal topic subscriber
-        self.goal_subscriber = rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.GoalCB)
+        self.goal_subscriber = rospy.Subscriber("/goal", PoseStamped, self.GoalCB)
         self.visuals = ROSMarkerPublisher('/goal_receiver/visuals', 100)
         self.set_goal_achieved_server = rospy.Service("/goal_receiver/set_goal_achieved", Empty, self.SetGoalAchievedCB)
         self.get_goal_info_server = rospy.Service("/goal_receiver/get_goal_info", GoalInfo, self.GetGoalInfoCB)
