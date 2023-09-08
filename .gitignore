@@ -1,0 +1,5 @@
+*orig
+*forces
+*__pycache__/
+*AlbertFORCESNLPsolver/
+.idea/
