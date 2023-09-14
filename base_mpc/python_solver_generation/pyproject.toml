@@ -16,6 +16,7 @@ requests = "2.26.0"
 idna = "3.4"
 pip = "20.0.2"
 numpy = "1.18.3"
+dill = "^0.3.7"
 
 
 [build-system]

@@ -17,6 +17,7 @@ helpers.load_forces_path()
 
 import numpy as np
 import copy
+import pickle
 import forcespro.nlp
 
 import dynamics
@@ -158,8 +159,16 @@ if __name__ == '__main__':
         #output1 = ("sol", [], [])
         generated_solver = solver.generate_solver(options) #, outputs
 
+        #save settings
+        params_dict = settings.params.save()
+        file_name = dir_path + "/Albertparams.pkl"
+
+        with open(file_name, 'wb') as outp:
+            pickle.dump(params_dict, outp, pickle.HIGHEST_PROTOCOL)
+
         # Move the solver up a directory for convenience
         if os.path.isdir(solver_path):
             shutil.move(solver_path, new_solver_path)
+
 
 

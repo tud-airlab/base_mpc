@@ -50,20 +50,28 @@ class ParameterStructure:
 
     def __init__(self):
         self.parameters = dict()
-        self.organization = dict() # Lists parameter grouping and indices
+        self.organization = dict()
+        self.indices = dict() # Lists parameter grouping and indices
         self.param_idx = 0
+        self.set_params = []
+
+    def __reduce__(self):
+        return (ParameterStructure, (self.progress_int,))
+
 
     def add_parameter(self, name):
         self.organization[self.param_idx] = 1
         self.parameters[self.param_idx] = name
-        setattr(self, name+ "_index", self.param_idx)
+        self.indices[name+ "_index"] = self.param_idx
+       # setattr(self, name+ "_index", self.param_idx)
         self.param_idx += 1
 
     def add_multiple_parameters(self, name, amount):
         self.organization[self.param_idx] = amount
         for i in range(amount):
             self.parameters[self.param_idx] = name + "_" + str(i)
-            setattr(self, name + "_" + str(i) + "_index", self.param_idx)
+            self.indices[name + "_" + str(i) + "_index"] = self.param_idx
+            #setattr(self, name + "_" + str(i) + "_index", self.param_idx)
             self.param_idx += 1
 
     def has_parameter(self, name):
@@ -88,7 +96,18 @@ class ParameterStructure:
     # When operating, retrieve the weights from param
     def load_params(self, params):
         for key, name in self.parameters.items(): # This is a parameter name
-            setattr(self, name, params[getattr(self, name+ "_index")]) # this is an index
+            #setattr(self, name, params[getattr(self, name+ "_index")]) # this is an index
+            setattr(self, name, params[self.indices[name + "_index"]])
+
+    def save(self):
+        return self.__dict__['indices']
+
+    def set_params(self,name, value):
+        if self.set_params.len == 0:
+            self.set_params = np.zeros(self.param_idx,1)
+        index = getattr(self, 'x_goal'+ "_index")
+        self.set_params[index] = value
+
 
 class WeightStructure:
 

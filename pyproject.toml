@@ -10,11 +10,13 @@ packages = [{include = "base_mpc"}]
 python = "^3.8"
 urdfenvs = "^0.8.15"
 robotmpcs = {git = "https://github.com/maxspahn/robot_mpcs.git", rev = "ft-updates"}
-rospkg = "^1.5.0"
 roslibpy = "^1.5.0"
+motion-planning-scenes = {version = "^0.1", optional = true}
 pypoman = "^1.0.0"
 termcolor = "^2.3.0"
 pyyaml = "^6.0.1"
+dill = "^0.3.7"
+gym = "^0.26.2"
 
 
 [build-system]
