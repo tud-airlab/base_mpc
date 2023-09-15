@@ -61,6 +61,7 @@ if __name__ == '__main__':
     solver.nvar = model.nvar    # number of online variables
     solver.neq = model.nx       # number of equality constraints
     solver.npar = settings.npar
+    model.nu # number inputs
 
     # Bounds
     solver.lb = model.lower_bound()
@@ -149,8 +150,8 @@ if __name__ == '__main__':
 
         # Remove the previous solver
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        solver_path = dir_path + "/mpc_solver_generation" + "/" + robot.name + 'FORCESNLPsolver'
-        new_solver_path = dir_path + "/../" + robot.name + 'FORCESNLPsolver'
+        solver_path = dir_path + "/" + robot.name + 'FORCESNLPsolver'
+        new_solver_path = dir_path + "/../" + "solvers/" + robot.name + 'FORCESNLPsolver'
         print("Path of the new solver: {}".format(new_solver_path))
         if os.path.exists(new_solver_path) and os.path.isdir(new_solver_path):
             shutil.rmtree(new_solver_path)
@@ -159,16 +160,25 @@ if __name__ == '__main__':
         #output1 = ("sol", [], [])
         generated_solver = solver.generate_solver(options) #, outputs
 
-        #save settings
-        params_dict = settings.params.save()
-        file_name = dir_path + "/Albertparams.pkl"
 
-        with open(file_name, 'wb') as outp:
-            pickle.dump(params_dict, outp, pickle.HIGHEST_PROTOCOL)
 
         # Move the solver up a directory for convenience
         if os.path.isdir(solver_path):
             shutil.move(solver_path, new_solver_path)
+
+        #save settings
+        solver_property_dict = {}
+        properties = {"nx": solver.neq, "nu": model.nu, "npar": solver.npar}
+
+        solver_property_dict['map_runtime_par'] = settings.params.save()
+        solver_property_dict['properties'] = properties
+        solver_property_dict['modules'] = [constraint.params for constraint in settings.modules.constraint_manager.constraints]
+
+        file_name = new_solver_path + "/Albertparams.pkl"
+        with open(file_name, 'wb') as outp:
+            pickle.dump(solver_property_dict, outp, pickle.HIGHEST_PROTOCOL)
+
+
 
 
 

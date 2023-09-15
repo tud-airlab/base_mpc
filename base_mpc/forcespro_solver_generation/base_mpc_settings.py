@@ -32,8 +32,8 @@ interfaces = ['AlbertSimulator', 'Albert']  # Define the interfaces that this so
 # --- Ellipsoid Settings --- #
 if use_ellipsoid_constraints or use_gaussian_constraints:
     modes = 1
-    max_obstacles = 5     # Maximum dynamic obstacles to evade with the planner
-    max_obstacles *= modes  # To account for the number of modes, we need an ellipsoid per mode!
+    n_max_obstacles = 5     # Maximum dynamic obstacles to evade with the planner
+    n_max_obstacles *= modes  # To account for the number of modes, we need an ellipsoid per mode!
 
 if use_linear_constraints:
     num_constraints = 8
@@ -44,7 +44,7 @@ if use_sqp_solver:
 
 # === Constraint Definition === #
 # ! DO NOT CHANGE THE ORDER ANY PARTS BELOW ! (i.e., parameters first, then inequalities!)
-params = helpers.ParameterStructure()
+params = helpers.RuntimeParameterStructure()
 modules = control_modules.ModuleManager(params)
 
 modules.add_module(control_modules.BASE_MPCModule(params, system, MPCConfig))  # Track a reference path
@@ -63,7 +63,7 @@ params.add_multiple_parameters("disc_offset", n_discs)
 
 #
 if use_ellipsoid_constraints:
-    modules.add_module(control_modules.EllipsoidalConstraintModule(params, n_discs=n_discs, max_obstacles=max_obstacles))
+    modules.add_module(control_modules.EllipsoidalConstraintModule(params, n_discs=n_discs, n_max_obstacles=n_max_obstacles))
 
 if use_linear_constraints:
     modules.add_module(control_modules.LinearConstraintModule(params, n_discs=n_discs, num_constraints=num_constraints))

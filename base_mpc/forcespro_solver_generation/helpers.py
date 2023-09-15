@@ -46,7 +46,7 @@ def check_forces_path(forces_path):
         return False
 
 
-class ParameterStructure:
+class RuntimeParameterStructure:
 
     def __init__(self):
         self.parameters = dict()
@@ -55,14 +55,10 @@ class ParameterStructure:
         self.param_idx = 0
         self.set_params = []
 
-    def __reduce__(self):
-        return (ParameterStructure, (self.progress_int,))
-
-
     def add_parameter(self, name):
         self.organization[self.param_idx] = 1
         self.parameters[self.param_idx] = name
-        self.indices[name+ "_index"] = self.param_idx
+        self.indices[name] = self.param_idx
        # setattr(self, name+ "_index", self.param_idx)
         self.param_idx += 1
 
@@ -70,7 +66,7 @@ class ParameterStructure:
         self.organization[self.param_idx] = amount
         for i in range(amount):
             self.parameters[self.param_idx] = name + "_" + str(i)
-            self.indices[name + "_" + str(i) + "_index"] = self.param_idx
+            self.indices[name + "_" + str(i)] = self.param_idx
             #setattr(self, name + "_" + str(i) + "_index", self.param_idx)
             self.param_idx += 1
 
@@ -97,7 +93,7 @@ class ParameterStructure:
     def load_params(self, params):
         for key, name in self.parameters.items(): # This is a parameter name
             #setattr(self, name, params[getattr(self, name+ "_index")]) # this is an index
-            setattr(self, name, params[self.indices[name + "_index"]])
+            setattr(self, name, params[self.indices[name]])
 
     def save(self):
         return self.__dict__['indices']

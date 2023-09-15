@@ -42,16 +42,19 @@ class LinearConstraints:
     def __init__(self, params, n_discs, num_constraints):
         self.num_constraints = num_constraints
         self.n_discs = n_discs
-        self.params = params
 
         self.nh = num_constraints * n_discs
+
+        self.params = {}
+        self.params['type'] = 'linear'
+        self.params['entries'] = ["_a1", "_a2", "_b"]
 
         # @Todo: Be able to add multiple sets of constraints
         for disc in range(n_discs):
             for i in range(num_constraints):
-                params.add_parameter(self.constraint_name(disc, i) + "_a1")
-                params.add_parameter(self.constraint_name(disc, i) + "_a2")
-                params.add_parameter(self.constraint_name(disc, i) + "_b")
+                for entry in self.params['entries']:
+                    params.add_parameter(self.constraint_name(disc, i) + entry)
+
 
     def constraint_name(self, disc_idx, constraint_idx):
         return "disc_"+str(disc_idx)+"_linear_constraint_"+str(constraint_idx)
@@ -95,22 +98,21 @@ class LinearConstraints:
 
 class EllipsoidConstraints:
 
-    def __init__(self, n_discs, max_obstacles, params, rotation_clockwise=True):
-        self.max_obstacles = max_obstacles
+    def __init__(self, n_discs, n_max_obstacles, params, rotation_clockwise=True):
+        self.max_obstacles = n_max_obstacles
         self.n_discs = n_discs
 
-        self.nh = max_obstacles * n_discs
+        self.nh = n_max_obstacles * n_discs
+
+        self.params = {}
+        self.params['type'] = 'ellipsoid'
+        self.params['entries'] = ["_x", "_y", "_z", "_psi", "_major", "_minor", "_chi", "_r"]
+
 
         # Add parameters
-        for obs_id in range(max_obstacles):
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_x")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_y")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_psi")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_major")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_minor")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_chi")
-            params.add_parameter("ellipsoid_obst_" + str(obs_id) + "_r")
-
+        for obs_id in range(n_max_obstacles):
+            for entry in self.params['entries']:
+                params.add_parameter("ellipsoid_obst_" + str(obs_id) + entry)
 
 
         self.rotation_clockwise = rotation_clockwise

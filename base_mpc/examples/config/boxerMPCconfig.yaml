@@ -1,0 +1,33 @@
+type: mpc
+mpc:
+  model_name: boxer
+  planning_horizon: 10
+  time_step: 0.2
+  n_discs: 1
+  r_disc: 0.6
+  disc_offset: 0.0
+  n_dyn_obstacles: 4
+  n_static_constraints: 4
+  slack: False
+  weights:
+    Wx: 2.0
+    Wy: 2.0
+    Wpsi: 2.0
+    Walpha: 0.001
+    Wtheta: 0.01
+    Wa: 0.001
+    Ws: 10000
+    Wv: 0.001
+    Ww: 0.001
+    Wrepulsive: 0.0
+    Wforward: 0.0
+  modules:
+    dyn_coll_avoid: 'ellipsoid'
+    static_coll_avoid: 'linear'
+
+
+
+
+
+
+
